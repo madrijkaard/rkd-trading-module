@@ -1,0 +1,945 @@
+//@version=4
+study("madrijkaard_setup_00", shorttitle="madrijkaard_setup_00", overlay=true)
+
+// Função para calcular o percentual de valorização ou desvalorização
+percentualValorizacao(candle) =>
+    percentual = abs((open[candle] - close[candle]) / close[candle]) * 100
+    percentual
+
+// Defina os períodos das médias móveis
+ema3 = ema(close, 9)
+ema10 = ema(close, 30)
+ema14 = ema(close, 35)
+
+// Determine quando ocorrem as cruzadas das médias móveis
+cruzada_acima = crossover(ema3, ema14)
+cruzada_abaixo = crossunder(ema3, ema10)
+
+// Plote as médias móveis
+plot(ema3, color=color.blue, title="EMA 3", linewidth=3)
+plot(ema10, color=color.red, title="EMA 10", linewidth=3)
+plot(ema14, color=color.green, title="EMA 14", linewidth=3)
+
+// --------------------------------------------------------------------------------------------------------------
+
+var bool verde = false
+var int v = 0
+
+var bool vermelho = false
+var int ver = 0
+
+if (cruzada_acima)
+    if (v == 1)
+        verde := false
+        v := 1
+    else
+        if (ver == 1)
+            verde := true
+        v := 1
+        ver := 0
+else
+    if (v == 1)
+        verde := false
+        v := 1
+    
+if (cruzada_abaixo)
+    if (ver == 1)
+        vermelho := false
+        ver := 1
+    else
+        if (v == 1)
+            vermelho := true
+        ver := 1
+        v := 0
+else
+    if (ver == 1)
+        vermelho := false
+        ver := 1
+
+if (cruzada_acima and cruzada_abaixo)
+    verde := false
+    vermelho := false
+
+if (cruzada_acima == false and cruzada_abaixo == false)
+    verde := false
+    vermelho := false
+
+// Crie os círculos verdes e vermelhos nas cruzadas
+plotshape(verde, style=shape.circle, location=location.abovebar, color=color.green, size=size.small)
+plotshape(vermelho, style=shape.circle, location=location.belowbar, color=color.red, size=size.small)
+
+// --------------------------------------------------------------------------------------------------------------
+
+var float[] sobrevenda = array.new_float(0)
+var float[] sobrecompra = array.new_float(0)
+
+var float somaSobreVenda = 0
+var float somaSobreCompra = 0
+
+var float somaSobreVendaTabela = 0
+var float somaSobreCompraTabela = 0
+
+// Variável para armazenar o número de candles desde a última cruzada acima
+var int candles_desde_ultima_cruzada_cima = 0
+var int ob = 0
+
+// Variável para armazenar o número de candles desde a última cruzada abaixo
+var int candles_desde_ultima_cruzada_abaixo = 0
+var int os = 0
+
+var float[] listaContadorVerde = array.new_float(0)
+var float[] listaContadorVermelho = array.new_float(0)
+
+var int contadorVerde = 0
+var int contadorVermelho = 0
+
+var float somaContadorVerde = 0
+var float somaContadorVermelho = 0
+
+var float somaContadorVerdeTabela = 0
+var float somaContadorVermelhoTabela = 0
+
+// Atualize o número de candles desde a última cruzada acima
+if (verde)
+    // Rótulo para mostrar o número de candles desde a última cruzada acima
+    //label.new(bar_index-1, high+350, tostring(candles_desde_ultima_cruzada_cima) + "/" + tostring(contadorVermelho), color=color.rgb(123, 155, 245), style=label.style_labelup)
+    array.unshift(sobrevenda, candles_desde_ultima_cruzada_cima)
+    array.unshift(listaContadorVerde, contadorVerde)
+    for i = 0 to array.size(listaContadorVerde) - 1
+        somaContadorVerde := somaContadorVerde + array.get(listaContadorVerde, i)
+    // Loop para sobrevenda os valores na lista
+    for i = 0 to array.size(sobrevenda) - 1
+        somaSobreVenda := somaSobreVenda + array.get(sobrevenda, i)
+    somaSobreVendaTabela := somaSobreVenda
+    somaSobreVenda := 0    
+    somaContadorVerdeTabela := somaContadorVerde
+    //label.new(bar_index-3, high+550, tostring(somaContadorVerdeTabela), color=color.rgb(233, 202, 65), style=label.style_labelup)
+    //label.new(bar_index-3, high+850, tostring(listaContadorVerde), color=color.rgb(233, 202, 65), style=label.style_labelup)
+    ob := candles_desde_ultima_cruzada_cima
+    somaContadorVerde := 0
+    candles_desde_ultima_cruzada_cima := 0
+    contadorVerde := 0
+    contadorVermelho := 0
+else
+    candles_desde_ultima_cruzada_cima := candles_desde_ultima_cruzada_cima + 1
+    contadorVerde := contadorVerde + 1
+    ob := candles_desde_ultima_cruzada_cima
+
+// Atualize o número de candles desde a última cruzada abaixo
+if (vermelho)
+    // Rótulo para mostrar o número de candles desde a última cruzada abaixo
+    //label.new(bar_index-1, low-350, tostring(candles_desde_ultima_cruzada_abaixo) + "/" + tostring(contadorVerde), color=color.rgb(233, 202, 65), style=label.style_label_down)
+    array.unshift(sobrecompra, candles_desde_ultima_cruzada_abaixo)
+    array.unshift(listaContadorVermelho, contadorVermelho)
+    for i = 0 to array.size(listaContadorVermelho) - 1
+        somaContadorVermelho := somaContadorVermelho + array.get(listaContadorVermelho, i)
+    // Loop para sobrecompra os valores na lista
+    for i = 0 to array.size(sobrecompra) - 1
+        somaSobreCompra := somaSobreCompra + array.get(sobrecompra, i)
+    somaSobreCompraTabela := somaSobreCompra
+    somaSobreCompra := 0
+    somaContadorVermelhoTabela := somaContadorVermelho
+    //label.new(bar_index-3, low-550, tostring(somaContadorVermelhoTabela), color=color.rgb(233, 202, 65), style=label.style_label_down)
+    //label.new(bar_index-3, low-850, tostring(listaContadorVermelho), color=color.rgb(233, 202, 65), style=label.style_label_down)
+    os := candles_desde_ultima_cruzada_abaixo
+    somaContadorVermelho := 0
+    candles_desde_ultima_cruzada_abaixo := 0
+    contadorVermelho := 0    
+    contadorVerde := 0
+else
+    candles_desde_ultima_cruzada_abaixo := candles_desde_ultima_cruzada_abaixo + 1
+    contadorVermelho := contadorVermelho + 1
+    os := (candles_desde_ultima_cruzada_abaixo - candles_desde_ultima_cruzada_cima) - 1
+
+// Mantenha apenas os 24 valores máximos mais recentes
+if (array.size(sobrevenda) > 2)
+    array.pop(sobrevenda)
+
+if (array.size(listaContadorVerde) > 3)
+    array.pop(listaContadorVerde)
+
+// Mantenha apenas os 24 valores mínimos mais recentes
+if (array.size(sobrecompra) > 2)
+    array.pop(sobrecompra)
+
+if (array.size(listaContadorVermelho) > 3)
+    array.pop(listaContadorVermelho)
+
+// --------------------------------------------------------------------------------------------------------------
+
+var tbl = table.new(position.bottom_right, 2, 25)
+
+// Função para verificar a condição e definir a cor da linha
+definirCorLinha(tbl, linha, open, close) =>
+    
+    // Verifique se o preço de abertura é maior que o preço de fechamento
+    cor = open > close ? color.red : color.green
+
+    // Calcule o percentual de valorização ou desvalorização
+    percentual = percentualValorizacao(linha-1)
+
+    // Defina a cor da linha da tabela
+    for i = 0 to 1
+        if i == 0
+            table.cell(tbl, i, linha, tostring(percentual, format.percent), bgcolor=cor, width=5, height=4)
+        if i == 1
+            table.cell(tbl, i, linha, tostring(close - open), bgcolor=cor, width=5, height=4)
+
+cabecalho = color.rgb(131, 167, 229)
+
+if (barstate.islast)
+    table.cell(tbl, 0, 0, "%", bgcolor = cabecalho, width = 5, height = 4)
+    table.cell(tbl, 1, 0, "▯▮", bgcolor = cabecalho, width = 5, height = 4)
+
+definirCorLinha(tbl, 1, open, close)
+definirCorLinha(tbl, 2, open[1], close[1])
+definirCorLinha(tbl, 3, open[2], close[2])
+
+definirCorLinha(tbl, 4, open[3], close[3])
+definirCorLinha(tbl, 5, open[4], close[4])
+definirCorLinha(tbl, 6, open[5], close[5])
+
+definirCorLinha(tbl, 7, open[6], close[6])
+definirCorLinha(tbl, 8, open[7], close[7])
+definirCorLinha(tbl, 9, open[8], close[8])
+
+definirCorLinha(tbl, 10, open[9], close[9])
+definirCorLinha(tbl, 11, open[10], close[10])
+definirCorLinha(tbl, 12, open[11], close[11])
+
+definirCorLinha(tbl, 13, open[12], close[12])
+definirCorLinha(tbl, 14, open[13], close[13])
+definirCorLinha(tbl, 15, open[14], close[14])
+
+definirCorLinha(tbl, 16, open[15], close[15])
+definirCorLinha(tbl, 17, open[16], close[16])
+definirCorLinha(tbl, 18, open[17], close[17])
+
+definirCorLinha(tbl, 19, open[18], close[18])
+definirCorLinha(tbl, 20, open[19], close[19])
+definirCorLinha(tbl, 21, open[20], close[20])
+
+definirCorLinha(tbl, 22, open[21], close[21])
+definirCorLinha(tbl, 23, open[22], close[22])
+definirCorLinha(tbl, 24, open[23], close[23])
+
+// --------------------------------------------------------------------------------------------------------------
+
+//var label ruidoLabel = na
+//var label ruidoLabel1 = na
+
+// Função para calcular a porcentagem de candles verdes e vermelhos
+var float greenCandlesRuido = na
+var float redCandlesRuido = na
+
+greenCandlesRuido := 0.0
+redCandlesRuido := 0.0
+
+for i = 0 to 24
+    if close[i] > open[i]
+        a = round(((close[i] - open[i]) / open[i]) * 100, 2)
+        if (a < 0.70)
+            g = close[i]-open[i] 
+            greenCandlesRuido := greenCandlesRuido + g 
+    else
+        a = round(((open[i] - close[i]) / close[i]) * 100, 2)
+        if (a < 0.70)
+            r = open[i]-close[i]
+            redCandlesRuido := redCandlesRuido + r
+
+percentage_greenx = (greenCandlesRuido / (greenCandlesRuido + redCandlesRuido)) * 100
+percentage_redx = (redCandlesRuido / (greenCandlesRuido + redCandlesRuido)) * 100
+
+// ruidoLabel := label.new(x=bar_index+25, y=high+50, text=tostring(greenCandlesRuido)+"%", color=color.rgb(221, 225, 232), style=label.style_label_center)
+// ruidoLabel1 := label.new(x=bar_index+25, y=high-50, text=tostring(redCandlesRuido)+"%", color=color.rgb(221, 225, 232), style=label.style_label_center)
+
+// // Remova o rótulo anterior
+// if not na(ruidoLabel[1])
+//     label.delete(ruidoLabel[1])
+
+// // Remova o rótulo anterior
+// if not na(ruidoLabel1[1])
+//     label.delete(ruidoLabel1[1])
+
+// --------------------------------------------------------------------------------------------------------------
+
+// Função para calcular a porcentagem de candles verdes e vermelhos
+var float greenCandlesRuido12 = na
+var float redCandlesRuido12 = na
+
+greenCandlesRuido12 := 0.0
+redCandlesRuido12 := 0.0
+
+for i = 0 to 12
+    if close[i] > open[i]
+        a = round(((close[i] - open[i]) / open[i]) * 100, 2)
+        if (a < 0.70)
+            g = close[i]-open[i] 
+            greenCandlesRuido12 := greenCandlesRuido12 + g 
+    else
+        a = round(((open[i] - close[i]) / close[i]) * 100, 2)
+        if (a < 0.70)
+            r = open[i]-close[i]
+            redCandlesRuido12 := redCandlesRuido12 + r
+
+percentage_greenx12 = (greenCandlesRuido12 / (greenCandlesRuido12 + redCandlesRuido12)) * 100
+percentage_redx12 = (redCandlesRuido12 / (greenCandlesRuido12 + redCandlesRuido12)) * 100
+
+// --------------------------------------------------------------------------------------------------------------
+
+// Tamanho da janela (últimos 24 candles)
+windowSize = 24
+halfWindowSize = 12
+
+// Função para calcular a porcentagem de candles verdes e vermelhos
+var float greenCandlesNaoRealAcima = na
+var float redCandlesNaoRealAcima = na
+var float greenCandlesNaoRealAbaixo = na
+var float redCandlesNaoRealAbaixo = na
+
+greenCandlesNaoRealAcima := 0.0
+redCandlesNaoRealAcima := 0.0
+greenCandlesNaoRealAbaixo := 0.0
+redCandlesNaoRealAbaixo := 0.0
+
+for i = 0 to windowSize - 1
+    if close[i] > open[i]
+        gnra = high[i]-close[i]
+        gnrb = open[i]-low[i]
+        greenCandlesNaoRealAcima := greenCandlesNaoRealAcima + gnra
+        greenCandlesNaoRealAbaixo := greenCandlesNaoRealAbaixo + gnrb
+    else
+        rnra = high[i]-open[i]
+        rnrb = close[i]-low[i]
+        redCandlesNaoRealAcima := redCandlesNaoRealAcima + rnra
+        redCandlesNaoRealAbaixo := redCandlesNaoRealAbaixo + rnrb 
+
+percentage_green_nao_real_acima_verde = (greenCandlesNaoRealAcima / (greenCandlesNaoRealAcima + redCandlesNaoRealAcima)) * 100
+percentage_red_nao_real_acima_vermelho = (redCandlesNaoRealAcima / (greenCandlesNaoRealAcima + redCandlesNaoRealAcima)) * 100
+
+percentage_green_nao_real_abaixo_verde = (greenCandlesNaoRealAbaixo / (greenCandlesNaoRealAbaixo + redCandlesNaoRealAbaixo)) * 100
+percentage_red_nao_real_abaixo_vermelho = (redCandlesNaoRealAbaixo / (greenCandlesNaoRealAbaixo + redCandlesNaoRealAbaixo)) * 100
+
+// --------------------------------------------------------------------------------------------------------------
+
+// Função para calcular a porcentagem de candles verdes e vermelhos
+var float greenCandlesNaoRealAcima12 = na
+var float redCandlesNaoRealAcima12 = na
+var float greenCandlesNaoRealAbaixo12 = na
+var float redCandlesNaoRealAbaixo12 = na
+
+greenCandlesNaoRealAcima12 := 0.0
+redCandlesNaoRealAcima12 := 0.0
+greenCandlesNaoRealAbaixo12 := 0.0
+redCandlesNaoRealAbaixo12 := 0.0
+
+for i = 0 to halfWindowSize - 1
+    if close[i] > open[i]
+        gnra12 = high[i]-close[i]
+        gnrb12 = open[i]-low[i]
+        greenCandlesNaoRealAcima12 := greenCandlesNaoRealAcima12 + gnra12
+        greenCandlesNaoRealAbaixo12 := greenCandlesNaoRealAbaixo12 + gnrb12
+    else
+        rnra12 = high[i]-open[i]
+        rnrb12 = close[i]-low[i]
+        redCandlesNaoRealAcima12 := redCandlesNaoRealAcima12 + rnra12
+        redCandlesNaoRealAbaixo12 := redCandlesNaoRealAbaixo12 + rnrb12 
+
+percentage_green_nao_real_acima_verde12 = (greenCandlesNaoRealAcima12 / (greenCandlesNaoRealAcima12 + redCandlesNaoRealAcima12)) * 100
+percentage_red_nao_real_acima_vermelho12 = (redCandlesNaoRealAcima12 / (greenCandlesNaoRealAcima12 + redCandlesNaoRealAcima12)) * 100
+
+percentage_green_nao_real_abaixo_verde12 = (greenCandlesNaoRealAbaixo12 / (greenCandlesNaoRealAbaixo12 + redCandlesNaoRealAbaixo12)) * 100
+percentage_red_nao_real_abaixo_vermelho12 = (redCandlesNaoRealAbaixo12 / (greenCandlesNaoRealAbaixo12 + redCandlesNaoRealAbaixo12)) * 100
+
+// --------------------------------------------------------------------------------------------------------------
+
+//--
+
+var float greenVolume = na
+var float redVolume = na
+var float totalVolume = na
+
+greenVolume := 0.0
+redVolume := 0.0
+totalVolume := 0.0
+
+for i = 0 to windowSize - 1
+    if close[i] > open[i]
+        greenVolume := greenVolume + volume[i]
+    else
+        redVolume := redVolume + volume[i]
+    
+    totalVolume := totalVolume + volume[i]
+
+percentage_green_volume_24 = (greenVolume / totalVolume) * 100
+percentage_red_volume_24 = (redVolume / totalVolume) * 100
+
+//--
+
+var float greenVolume12 = na
+var float redVolume12 = na
+var float totalVolume12 = na
+
+greenVolume12 := 0.0
+redVolume12 := 0.0
+totalVolume12 := 0.0
+
+for i = 0 to halfWindowSize - 1
+    if close[i] > open[i]
+        greenVolume12 := greenVolume12 + volume[i]
+    else
+        redVolume12 := redVolume12 + volume[i]
+    
+    totalVolume12 := totalVolume12 + volume[i]
+
+percentage_green_volume_12 = (greenVolume12 / totalVolume12) * 100
+percentage_red_volume_12 = (redVolume12 / totalVolume12) * 100
+
+//-
+
+// Função para calcular a porcentagem de candles verdes e vermelhos
+var float greenCandles = na
+var float redCandles = na
+
+greenCandles := 0.0
+redCandles := 0.0
+
+for i = 0 to windowSize - 1
+    if close[i] > open[i]
+        g = close[i]-open[i]
+        greenCandles := greenCandles + g 
+    else
+        r = open[i]-close[i]
+        redCandles := redCandles + r
+
+percentage_green = (greenCandles / (greenCandles + redCandles)) * 100
+percentage_red = (redCandles / (greenCandles + redCandles)) * 100
+
+//--
+
+// Função para calcular a porcentagem de candles verdes e vermelhos
+var float halfGreenCandles = na
+var float halfRedCandles = na
+
+halfGreenCandles := 0.0
+halfRedCandles := 0.0
+
+for m = 0 to halfWindowSize - 1
+    if close[m] > open[m]
+        g = close[m]-open[m]
+        halfGreenCandles := halfGreenCandles + g 
+    else
+        r = open[m]-close[m]
+        halfRedCandles := halfRedCandles + r
+
+half_percentage_green = (halfGreenCandles / (halfGreenCandles + halfRedCandles)) * 100
+half_percentage_red = (halfRedCandles / (halfGreenCandles + halfRedCandles)) * 100
+
+// --------------------------------------------------------------------------------------------------------------
+
+var float[] ultimos24CandlesCorposNaoReaisAcima = array.new_float(0)
+var float[] ultimos24CandlesCorposNaoReaisAbaixo = array.new_float(0)
+
+// Atualize a lista de valores máximos das últimas 24 cruzadas acima
+if (open < close)
+    array.unshift(ultimos24CandlesCorposNaoReaisAcima, floor((high-close) * 100) / 100)
+    array.unshift(ultimos24CandlesCorposNaoReaisAbaixo, floor((open-low) * 100) / 100)
+else
+    array.unshift(ultimos24CandlesCorposNaoReaisAcima, floor((high-open) * 100) / 100)
+    array.unshift(ultimos24CandlesCorposNaoReaisAbaixo, floor((close-low) * 100) / 100)
+
+// Mantenha apenas os 24 valores máximos mais recentes
+if (array.size(ultimos24CandlesCorposNaoReaisAcima) > 24)
+    array.pop(ultimos24CandlesCorposNaoReaisAcima)
+    
+// Mantenha apenas os 24 valores mínimos mais recentes
+if (array.size(ultimos24CandlesCorposNaoReaisAbaixo) > 24)
+    array.pop(ultimos24CandlesCorposNaoReaisAbaixo)
+
+// Rótulo para mostrar os valores mínimos das últimas 6 cruzadas acima
+//var label ultimos24CandlesCorposNaoReaisAcimaLabel = na
+// Rótulo para mostrar os valores mínimos das últimas 6 cruzadas acima
+//var label ultimos24CandlesCorposNaoReaisAbaixoLabel = na
+
+var tblSomatorio = table.new(position.bottom_center, 20, 2)
+
+if (bar_index >= 24)
+
+    var float somaAcima12 = 0.0
+    var float somaAbaixo12 = 0.0
+
+    var float somaAcima = 0.0
+    var float somaAbaixo = 0.0
+
+    somaAcima12 := array.get(ultimos24CandlesCorposNaoReaisAcima, 0) + array.get(ultimos24CandlesCorposNaoReaisAcima, 1) + array.get(ultimos24CandlesCorposNaoReaisAcima, 2) + array.get(ultimos24CandlesCorposNaoReaisAcima, 3) + array.get(ultimos24CandlesCorposNaoReaisAcima, 4) + array.get(ultimos24CandlesCorposNaoReaisAcima, 5) + array.get(ultimos24CandlesCorposNaoReaisAcima, 6) + array.get(ultimos24CandlesCorposNaoReaisAcima, 7) + array.get(ultimos24CandlesCorposNaoReaisAcima, 8) + array.get(ultimos24CandlesCorposNaoReaisAcima, 9) + array.get(ultimos24CandlesCorposNaoReaisAcima, 10) + array.get(ultimos24CandlesCorposNaoReaisAcima, 11)
+    somaAbaixo12 := array.get(ultimos24CandlesCorposNaoReaisAbaixo, 0) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 1) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 2) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 3) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 4) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 5) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 6) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 7) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 8) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 9) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 10) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 11)
+
+    somaAcima := array.get(ultimos24CandlesCorposNaoReaisAcima, 0) + array.get(ultimos24CandlesCorposNaoReaisAcima, 1) + array.get(ultimos24CandlesCorposNaoReaisAcima, 2) + array.get(ultimos24CandlesCorposNaoReaisAcima, 3) + array.get(ultimos24CandlesCorposNaoReaisAcima, 4) + array.get(ultimos24CandlesCorposNaoReaisAcima, 5) + array.get(ultimos24CandlesCorposNaoReaisAcima, 6) + array.get(ultimos24CandlesCorposNaoReaisAcima, 7) + array.get(ultimos24CandlesCorposNaoReaisAcima, 8) + array.get(ultimos24CandlesCorposNaoReaisAcima, 9) + array.get(ultimos24CandlesCorposNaoReaisAcima, 10) + array.get(ultimos24CandlesCorposNaoReaisAcima, 11) + array.get(ultimos24CandlesCorposNaoReaisAcima, 12) + array.get(ultimos24CandlesCorposNaoReaisAcima, 13) + array.get(ultimos24CandlesCorposNaoReaisAcima, 14) + array.get(ultimos24CandlesCorposNaoReaisAcima, 15) + array.get(ultimos24CandlesCorposNaoReaisAcima, 16) + array.get(ultimos24CandlesCorposNaoReaisAcima, 17) + array.get(ultimos24CandlesCorposNaoReaisAcima, 18) + array.get(ultimos24CandlesCorposNaoReaisAcima, 19) + array.get(ultimos24CandlesCorposNaoReaisAcima, 20) + array.get(ultimos24CandlesCorposNaoReaisAcima, 21) + array.get(ultimos24CandlesCorposNaoReaisAcima, 22) + array.get(ultimos24CandlesCorposNaoReaisAcima, 23)  
+    somaAbaixo := array.get(ultimos24CandlesCorposNaoReaisAbaixo, 0) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 1) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 2) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 3) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 4) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 5) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 6) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 7) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 8) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 9) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 10) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 11) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 12) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 13) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 14) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 15) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 16) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 17) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 18) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 19) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 20) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 21) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 22) + array.get(ultimos24CandlesCorposNaoReaisAbaixo, 23)
+
+    percentage_var12 = (somaAcima12 / (somaAcima12 + somaAbaixo12)) * 100
+    percentage_var22 = (somaAbaixo12 / (somaAcima12 + somaAbaixo12)) * 100
+
+    percentage_var1 = (somaAcima / (somaAcima + somaAbaixo)) * 100
+    percentage_var2 = (somaAbaixo / (somaAcima + somaAbaixo)) * 100
+
+    //ultimos24CandlesCorposNaoReaisAcimaLabel := label.new(x=bar_index+10, y=high+100, text=tostring(greenCandles), color=color.rgb(74, 230, 68), style=label.style_label_center)
+    //ultimos24CandlesCorposNaoReaisAbaixoLabel := label.new(x=bar_index+10, y=high-100, text=tostring(redCandles), color=color.rgb(74, 230, 68), style=label.style_label_center)
+
+    if (barstate.islast)
+        table.cell(tblSomatorio, 0, 0, "| 24C ⇧%", bgcolor = color.rgb(131, 167, 229), width = 6, height = 4)
+        table.cell(tblSomatorio, 1, 0, "| 24C ⇩%", bgcolor = color.rgb(131, 167, 229), width = 6, height = 4)
+        table.cell(tblSomatorio, 2, 0, "| 24G ⇧%", bgcolor = color.rgb(131, 167, 229), width = 6, height = 4)
+        table.cell(tblSomatorio, 3, 0, "| 24R ⇧%", bgcolor = color.rgb(131, 167, 229), width = 6, height = 4)
+        table.cell(tblSomatorio, 4, 0, "| 24G ⇩%", bgcolor = color.rgb(131, 167, 229), width = 6, height = 4)
+        table.cell(tblSomatorio, 5, 0, "| 24R ⇩%", bgcolor = color.rgb(131, 167, 229), width = 6, height = 4)
+
+        table.cell(tblSomatorio, 6, 0, "| 12C ⇧%", bgcolor = color.rgb(131, 167, 229), width = 6, height = 4)
+        table.cell(tblSomatorio, 7, 0, "| 12C ⇩%", bgcolor = color.rgb(131, 167, 229), width = 6, height = 4)
+        table.cell(tblSomatorio, 8, 0, "| 12G ⇧%", bgcolor = color.rgb(131, 167, 229), width = 6, height = 4)
+        table.cell(tblSomatorio, 9, 0, "| 12R ⇧%", bgcolor = color.rgb(131, 167, 229), width = 6, height = 4)
+        table.cell(tblSomatorio, 10, 0, "| 12G ⇩%", bgcolor = color.rgb(131, 167, 229), width = 6, height = 4)
+        table.cell(tblSomatorio, 11, 0, "| 12R ⇩%", bgcolor = color.rgb(131, 167, 229), width = 6, height = 4)
+        
+        table.cell(tblSomatorio, 0, 1, tostring(floor((percentage_var1) * 100) / 100)+"%", bgcolor = color.blue, width = 4, height = 4)
+        table.cell(tblSomatorio, 1, 1, tostring(floor((percentage_var2) * 100) / 100)+"%", bgcolor = color.yellow, width = 4, height = 4)
+        table.cell(tblSomatorio, 2, 1, tostring(floor((percentage_green_nao_real_acima_verde) * 100) / 100)+"%", bgcolor = color.green, width = 4, height = 4)
+        table.cell(tblSomatorio, 3, 1, tostring(floor((percentage_red_nao_real_acima_vermelho) * 100) / 100)+"%", bgcolor = color.red, width = 4, height = 4)
+        table.cell(tblSomatorio, 4, 1, tostring(floor((percentage_green_nao_real_abaixo_verde) * 100) / 100)+"%", bgcolor = color.green, width = 4, height = 4)
+        table.cell(tblSomatorio, 5, 1, tostring(floor((percentage_red_nao_real_abaixo_vermelho) * 100) / 100)+"%", bgcolor = color.red, width = 4, height = 4)
+
+        table.cell(tblSomatorio, 6, 1, tostring(floor((percentage_var12) * 100) / 100)+"%", bgcolor = color.blue, width = 4, height = 4)
+        table.cell(tblSomatorio, 7, 1, tostring(floor((percentage_var22) * 100) / 100)+"%", bgcolor = color.yellow, width = 4, height = 4)
+        table.cell(tblSomatorio, 8, 1, tostring(floor((percentage_green_nao_real_acima_verde12) * 100) / 100)+"%", bgcolor = color.green, width = 4, height = 4)
+        table.cell(tblSomatorio, 9, 1, tostring(floor((percentage_red_nao_real_acima_vermelho12) * 100) / 100)+"%", bgcolor = color.red, width = 4, height = 4)
+        table.cell(tblSomatorio, 10, 1, tostring(floor((percentage_green_nao_real_abaixo_verde12) * 100) / 100)+"%", bgcolor = color.green, width = 4, height = 4)
+        table.cell(tblSomatorio, 11, 1, tostring(floor((percentage_red_nao_real_abaixo_vermelho12) * 100) / 100)+"%", bgcolor = color.red, width = 4, height = 4)
+
+        somaSobreVenda := 0
+        somaSobreCompra := 0
+
+// Exclua o rótulo anterior
+//label.delete(ultimos24CandlesCorposNaoReaisAcimaLabel[1])
+//label.delete(ultimos24CandlesCorposNaoReaisAbaixoLabel[1])
+
+// --------------------------------------------------------------------------------------------------------------
+
+var tbl1 = table.new(position.top_center, 6, 1)
+
+coluna6 = color.gray
+coluna5 = color.gray
+coluna4 = color.gray
+coluna3 = color.gray
+coluna2 = color.gray
+coluna1 = color.gray
+
+var highCount = 0
+var lowCount = 0
+
+for i = 20 to 23
+    if open[i] > close[i]
+        lowCount := lowCount + 1
+    else if open[i] < close[i]
+        highCount := highCount + 1
+
+if (highCount == 4)
+    coluna6 := color.blue
+else if (highCount == 3 and lowCount == 1)
+    coluna6 := color.green
+else if (highCount == 2 and lowCount == 2)
+    coluna6 := color.yellow
+else if (lowCount == 3 and highCount == 1)
+    coluna6 := color.orange
+else if (lowCount == 4)
+    coluna6 := color.red
+
+lowCount := 0
+highCount := 0
+
+for i = 16 to 19
+    if open[i] > close[i]
+        lowCount := lowCount + 1
+    else if open[i] < close[i]
+        highCount := highCount + 1
+
+if (highCount == 4)
+    coluna5 := color.blue
+else if (highCount == 3 and lowCount == 1)
+    coluna5 := color.green
+else if (highCount == 2 and lowCount == 2)
+    coluna5 := color.yellow
+else if (lowCount == 3 and highCount == 1)
+    coluna5 := color.orange
+else if (lowCount == 4)
+    coluna5 := color.red
+
+lowCount := 0
+highCount := 0
+
+for i = 12 to 15
+    if open[i] > close[i]
+        lowCount := lowCount + 1
+    else if open[i] < close[i]
+        highCount := highCount + 1
+
+if (highCount == 4)
+    coluna4 := color.blue
+else if (highCount == 3 and lowCount == 1)
+    coluna4 := color.green
+else if (highCount == 2 and lowCount == 2)
+    coluna4 := color.yellow
+else if (lowCount == 3 and highCount == 1)
+    coluna4 := color.orange
+else if (lowCount == 4)
+    coluna4 := color.red
+
+lowCount := 0
+highCount := 0
+
+for i = 8 to 11
+    if open[i] > close[i]
+        lowCount := lowCount + 1
+    else if open[i] < close[i]
+        highCount := highCount + 1
+
+if (highCount == 4)
+    coluna3 := color.blue
+else if (highCount == 3 and lowCount == 1)
+    coluna3 := color.green
+else if (highCount == 2 and lowCount == 2)
+    coluna3 := color.yellow
+else if (lowCount == 3 and highCount == 1)
+    coluna3 := color.orange
+else if (lowCount == 4)
+    coluna3 := color.red
+
+lowCount := 0
+highCount := 0
+
+for i = 4 to 7
+    if open[i] > close[i]
+        lowCount := lowCount + 1
+    else if open[i] < close[i]
+        highCount := highCount + 1
+
+if (highCount == 4)
+    coluna2 := color.blue
+else if (highCount == 3 and lowCount == 1)
+    coluna2 := color.green
+else if (highCount == 2 and lowCount == 2)
+    coluna2 := color.yellow
+else if (lowCount == 3 and highCount == 1)
+    coluna2 := color.orange
+else if (lowCount == 4)
+    coluna2 := color.red
+
+lowCount := 0
+highCount := 0
+
+for i = 0 to 3
+    if open[i] > close[i]
+        lowCount := lowCount + 1
+    else if open[i] < close[i]
+        highCount := highCount + 1
+
+if (highCount == 4)
+    coluna1 := color.blue
+else if (highCount == 3 and lowCount == 1)
+    coluna1 := color.green
+else if (highCount == 2 and lowCount == 2)
+    coluna1 := color.yellow
+else if (lowCount == 3 and highCount == 1)
+    coluna1 := color.orange
+else if (lowCount == 4)
+    coluna1 := color.red
+
+lowCount := 0
+highCount := 0
+
+if (barstate.islast)
+    table.cell(tbl1, 0, 0, "24-21", bgcolor = coluna6, width = 5, height = 4)
+    table.cell(tbl1, 1, 0, "20-17", bgcolor = coluna5, width = 5, height = 4)
+    table.cell(tbl1, 2, 0, "16-13", bgcolor = coluna4, width = 5, height = 4)
+    table.cell(tbl1, 3, 0, "12-9", bgcolor = coluna3, width = 5, height = 4)
+    table.cell(tbl1, 4, 0, "8-5", bgcolor = coluna2, width = 5, height = 4)
+    table.cell(tbl1, 5, 0, "4-1", bgcolor = coluna1, width = 5, height = 4)
+
+// --------------------------------------------------------------------------------------------------------------
+
+var line maxLine = na
+var line minLine = na
+
+// Calcula o valor máximo dos últimos 24 candles
+maxHigh = highest(high, 24)
+
+// Calcula o valor mínimo dos últimos 24 candles
+minLow = lowest(low, 24)
+
+// Verifica se os valores máximos e mínimos foram alterados e atualiza as linhas
+if maxHigh != maxHigh[1]
+    line.delete(maxLine)
+    maxLine := line.new(x1=bar_index - 24, y1=maxHigh, x2=bar_index, y2=maxHigh, width=1, color=color.rgb(249, 68, 246))
+
+if minLow != minLow[1]
+    line.delete(minLine)
+    minLine := line.new(x1=bar_index - 24, y1=minLow, x2=bar_index, y2=minLow, width=1, color=color.rgb(249, 68, 246))
+
+// --------------------------------------------------------------------------------------------------------------
+
+var line maxLine1 = na
+var line minLine1 = na
+
+// Calcula o valor máximo dos últimos 24 candles
+maxHigh1 = highest(high, 48)
+
+// Calcula o valor mínimo dos últimos 24 candles
+minLow1 = lowest(low, 48)
+
+// Verifica se os valores máximos e mínimos foram alterados e atualiza as linhas
+if maxHigh1 != maxHigh1[1]
+    line.delete(maxLine1)
+    maxLine1 := line.new(x1=bar_index - 48, y1=maxHigh1, x2=bar_index, y2=maxHigh1, width=1, color=color.rgb(249, 68, 246))
+
+if minLow1 != minLow1[1]
+    line.delete(minLine1)
+    minLine1 := line.new(x1=bar_index - 48, y1=minLow1, x2=bar_index, y2=minLow1, width=1, color=color.rgb(249, 68, 246))
+
+// --------------------------------------------------------------------------------------------------------------
+
+var line maxLine2 = na
+var line minLine2 = na
+
+// Calcula o valor máximo dos últimos 24 candles
+maxHigh2 = highest(high, 72)
+
+// Calcula o valor mínimo dos últimos 24 candles
+minLow2 = lowest(low, 72)
+
+// Verifica se os valores máximos e mínimos foram alterados e atualiza as linhas
+if maxHigh2 != maxHigh2[1]
+    line.delete(maxLine2)
+    maxLine2 := line.new(x1=bar_index - 72, y1=maxHigh2, x2=bar_index, y2=maxHigh2, width=1, color=color.rgb(249, 68, 246))
+
+if minLow2 != minLow2[1]
+    line.delete(minLine2)
+    minLine2 := line.new(x1=bar_index - 72, y1=minLow2, x2=bar_index, y2=minLow2, width=1, color=color.rgb(249, 68, 246))
+
+// --------------------------------------------------------------------------------------------------------------
+
+var line maxLine3 = na
+var line minLine3 = na
+
+// Calcula o valor máximo dos últimos 24 candles
+maxHigh3 = highest(high, 96)
+
+// Calcula o valor mínimo dos últimos 24 candles
+minLow3 = lowest(low, 96)
+
+// Verifica se os valores máximos e mínimos foram alterados e atualiza as linhas
+if maxHigh3 != maxHigh3[1]
+    line.delete(maxLine3)
+    maxLine3 := line.new(x1=bar_index - 96, y1=maxHigh3, x2=bar_index, y2=maxHigh3, width=1, color=color.rgb(249, 68, 246))
+
+if minLow3 != minLow3[1]
+    line.delete(minLine3)
+    minLine3 := line.new(x1=bar_index - 96, y1=minLow3, x2=bar_index, y2=minLow3, width=1, color=color.rgb(249, 68, 246))
+
+// --------------------------------------------------------------------------------------------------------------
+
+var line maxLine4 = na
+var line minLine4 = na
+
+// Calcula o valor máximo dos últimos 24 candles
+maxHigh4 = highest(high, 120)
+
+// Calcula o valor mínimo dos últimos 24 candles
+minLow4 = lowest(low, 120)
+
+// Verifica se os valores máximos e mínimos foram alterados e atualiza as linhas
+if maxHigh4 != maxHigh4[1]
+    line.delete(maxLine4)
+    maxLine4 := line.new(x1=bar_index - 120, y1=maxHigh4, x2=bar_index, y2=maxHigh4, width=1, color=color.rgb(249, 68, 246))
+
+if minLow4 != minLow4[1]
+    line.delete(minLine4)
+    minLine4 := line.new(x1=bar_index - 120, y1=minLow4, x2=bar_index, y2=minLow4, width=1, color=color.rgb(249, 68, 246))
+
+// --------------------------------------------------------------------------------------------------------------
+
+var line maxLine5 = na
+var line minLine5 = na
+
+// Calcula o valor máximo dos últimos 24 candles
+maxHigh5 = highest(high, 144)
+
+// Calcula o valor mínimo dos últimos 24 candles
+minLow5 = lowest(low, 144)
+
+// Verifica se os valores máximos e mínimos foram alterados e atualiza as linhas
+if maxHigh5 != maxHigh5[1]
+    line.delete(maxLine5)
+    maxLine5 := line.new(x1=bar_index - 144, y1=maxHigh5, x2=bar_index, y2=maxHigh5, width=1, color=color.rgb(249, 68, 246))
+
+if minLow5 != minLow5[1]
+    line.delete(minLine5)
+    minLine5 := line.new(x1=bar_index - 144, y1=minLow5, x2=bar_index, y2=minLow5, width=1, color=color.rgb(249, 68, 246))
+
+// --------------------------------------------------------------------------------------------------------------
+
+var line maxLine6 = na
+var line minLine6 = na
+
+// Calcula o valor máximo dos últimos 24 candles
+maxHigh6 = highest(high, 168)
+
+// Calcula o valor mínimo dos últimos 24 candles
+minLow6 = lowest(low, 168)
+
+// Verifica se os valores máximos e mínimos foram alterados e atualiza as linhas
+if maxHigh6 != maxHigh6[1]
+    line.delete(maxLine6)
+    maxLine6 := line.new(x1=bar_index - 168, y1=maxHigh6, x2=bar_index, y2=maxHigh6, width=1, color=color.rgb(249, 68, 246))
+
+if minLow6 != minLow6[1]
+    line.delete(minLine6)
+    minLine6 := line.new(x1=bar_index - 168, y1=minLow6, x2=bar_index, y2=minLow6, width=1, color=color.rgb(249, 68, 246))
+
+// --------------------------------------------------------------------------------------------------------------
+
+var tblAmplitude1 = table.new(position.middle_left, 2, 33)
+
+var float amplitude2448 = na
+amplitude2448 := round(((maxHigh1 - maxHigh) / maxHigh) * 100, 2)
+
+var float amplitude4872 = na
+amplitude4872 := round(((maxHigh2 - maxHigh1) / maxHigh1) * 100, 2)
+
+var float amplitude7296 = na
+amplitude7296 := round(((maxHigh3 - maxHigh2) / maxHigh2) * 100, 2)
+
+var float amplitude96120 = na
+amplitude96120 := round(((maxHigh4 - maxHigh3) / maxHigh3) * 100, 2)
+
+var float amplitude120144 = na
+amplitude120144 := round(((maxHigh5 - maxHigh4) / maxHigh4) * 100, 2)
+
+var float amplitude144168 = na
+amplitude144168 := round(((maxHigh6 - maxHigh5) / maxHigh5) * 100, 2)
+
+//--
+
+var float minamplitude2448 = na
+minamplitude2448 := round(((minLow1 - minLow) / minLow) * 100, 2)
+
+var float minamplitude4872 = na
+minamplitude4872 := round(((minLow2 - minLow1) / minLow1) * 100, 2)
+
+var float minamplitude7296 = na
+minamplitude7296 := round(((minLow3 - minLow2) / minLow2) * 100, 2)
+
+var float minamplitude96120 = na
+minamplitude96120 := round(((minLow4 - minLow3) / minLow3) * 100, 2)
+
+var float minamplitude120144 = na
+minamplitude120144 := round(((minLow5 - minLow4) / minLow4) * 100, 2)
+
+var float minamplitude144168 = na
+minamplitude144168 := round(((minLow6 - minLow5) / minLow5) * 100, 2)
+
+table.cell(tblAmplitude1, 0, 0, "OB", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 1, tostring(ob), bgcolor = color.green, width = 5, height = 3, text_size = size.normal)
+table.cell(tblAmplitude1, 1, 0, "OS", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 1, tostring(os), bgcolor = color.red, width = 5, height = 3, text_size = size.normal)
+
+table.cell(tblAmplitude1, 0, 2, "OB3 ○-●", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 3, tostring(listaContadorVermelho), bgcolor = color.green, width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 2, "OS3 ●-○", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 3, tostring(listaContadorVerde), bgcolor = color.red, width = 5, height = 3)
+
+table.cell(tblAmplitude1, 0, 4, "NOISE 24", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 5, tostring(floor((percentage_greenx) * 100) / 100)+"%", bgcolor = color.green, width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 4, "NOISE 24", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 5, tostring(floor((percentage_redx) * 100) / 100)+"%", bgcolor = color.red, width = 5, height = 3)
+
+table.cell(tblAmplitude1, 0, 6, "NOISE 12", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 7, tostring(floor((percentage_greenx12) * 100) / 100)+"%", bgcolor = color.green, width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 6, "NOISE 12", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 7, tostring(floor((percentage_redx12) * 100) / 100)+"%", bgcolor = color.red, width = 5, height = 3)
+
+table.cell(tblAmplitude1, 0, 8, "VOL 24", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 9, tostring(floor((percentage_green_volume_24) * 100) / 100)+"%", bgcolor = color.green, width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 8, "VOL 24", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 9, tostring(floor((percentage_red_volume_24) * 100) / 100)+"%", bgcolor = color.red, width = 5, height = 3)
+
+table.cell(tblAmplitude1, 0, 10, "VOL 12", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 11, tostring(floor((percentage_green_volume_12) * 100) / 100)+"%", bgcolor = color.green, width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 10, "VOL 12", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 11, tostring(floor((percentage_red_volume_12) * 100) / 100)+"%", bgcolor = color.red, width = 5, height = 3)
+
+table.cell(tblAmplitude1, 0, 12, "▯ 24", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 13, tostring(floor((percentage_green) * 100) / 100)+"%", bgcolor = color.green, width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 12, "▮ 24", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 13, tostring(floor((percentage_red) * 100) / 100)+"%", bgcolor = color.red, width = 5, height = 3)
+
+table.cell(tblAmplitude1, 0, 14, "▯ 12", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 15, tostring(floor((half_percentage_green) * 100) / 100)+"%", bgcolor = color.green, width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 14, "▮ 12", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 15, tostring(floor((half_percentage_red) * 100) / 100)+"%", bgcolor = color.red, width = 5, height = 3)
+
+table.cell(tblAmplitude1, 0, 16, "MAX/MIN", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 17, "144/168 ⇧", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 18, "120/144 ⇧", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 19, "96/120   ⇧", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 20, "72/96     ⇧", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 21, "48/72     ⇧", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 22, "24/48     ⇧", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+ 
+table.cell(tblAmplitude1, 0, 23, "24/48     ⇩", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 24, "48/72     ⇩", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 25, "72/96     ⇩", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 26, "96/120   ⇩", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 27, "120/144 ⇩", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 0, 28, "144/168 ⇩", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+
+table.cell(tblAmplitude1, 1, 16, "%", bgcolor = color.rgb(131, 167, 229), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 17, tostring(amplitude144168)+"%", bgcolor = color.rgb(221, 225, 232), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 18, tostring(amplitude120144)+"%", bgcolor = color.rgb(221, 225, 232), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 19, tostring(amplitude96120)+"%", bgcolor = color.rgb(221, 225, 232), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 20, tostring(amplitude7296)+"%", bgcolor = color.rgb(221, 225, 232), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 21, tostring(amplitude4872)+"%", bgcolor = color.rgb(221, 225, 232), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 22, tostring(amplitude2448)+"%", bgcolor = color.rgb(221, 225, 232), width = 5, height = 3)
+
+table.cell(tblAmplitude1, 1, 23, tostring(minamplitude2448)+"%", bgcolor = color.rgb(221, 225, 232), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 24, tostring(minamplitude4872)+"%", bgcolor = color.rgb(221, 225, 232), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 25, tostring(minamplitude7296)+"%", bgcolor = color.rgb(221, 225, 232), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 26, tostring(minamplitude96120)+"%", bgcolor = color.rgb(221, 225, 232), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 27, tostring(minamplitude120144)+"%", bgcolor = color.rgb(221, 225, 232), width = 5, height = 3)
+table.cell(tblAmplitude1, 1, 28, tostring(minamplitude144168)+"%", bgcolor = color.rgb(221, 225, 232), width = 5, height = 3)
+
+// --------------------------------------------------------------------------------------------------------------
+
+// Obter dados de 1 minuto
+price1m = security(syminfo.tickerid, "1D", close)
+
+var label amplitudeAtual1Label = na
+
+var float precoReferencia = na
+var float amplitude2 = na
+
+if (cruzada_acima)
+    precoReferencia := open
+    amplitude2 := 0
+
+if (cruzada_abaixo)
+    precoReferencia := open
+    amplitude2 := 0
+
+amplitude2 := round(((price1m - precoReferencia) / precoReferencia) * 100, 3)
+
+amplitudeAtual1Label := label.new(x=bar_index+10, y=high, text=tostring(amplitude2)+"%", color=color.rgb(221, 225, 232), style=label.style_label_center)
+
+// Remova o rótulo anterior
+if not na(amplitudeAtual1Label[1])
+    label.delete(amplitudeAtual1Label[1])
+
+// --------------------------------------------------------------------------------------------------------------
